@@ -6,7 +6,8 @@ import {
 import { Link, navigate, useRoute } from '../lib/router.jsx';
 import { useSession } from '../lib/session.jsx';
 import { api } from '../lib/api.js';
-import { money, initials } from '../lib/format.js';
+import { money } from '../lib/format.js';
+import { BrandMark, StoreName, Avatar } from './Brand.jsx';
 import { BackButton, IconButton, Button, useDebounced } from './kit.jsx';
 import { Sheet, useAction } from './overlay.jsx';
 import { CustomerPicker, CustomerForm } from './pickers.jsx';
@@ -51,8 +52,8 @@ export function Shell({ children }) {
     <div className="app">
       <nav className="sidebar" aria-label="Main">
         <div className="side-brand">
-          <b>{settings.store_name || 'Store Manager'}</b>
-          <span>Store Manager{demo ? ' (demo)' : ''}</span>
+          <BrandMark size={38} />
+          <StoreName name={settings.store_name} />
         </div>
         {!isInstaller && <Button variant="primary" icon={Plus} onClick={() => setCreating(true)} className="btn-block" style={{ marginBottom: 10 }}>New</Button>}
         {nav.map((n, i) => (n.sep ? <div key={`s${i}`} className="side-sep" /> : (
@@ -61,7 +62,8 @@ export function Shell({ children }) {
           </Link>
         )))}
         <div className="side-foot">
-          <div className="hstack"><span className="avatar" style={{ width: 32, height: 32, fontSize: 14 }}>{initials(user?.name)}</span><span className="grow ellipsis">{user?.name}</span></div>
+          {demo && <span className="badge badge-warn" style={{ justifySelf: 'start' }}>Sample data</span>}
+          <div className="hstack"><Avatar name={user?.name} size={32} /><span className="grow ellipsis">{user?.name}</span></div>
           <Button size="sm" variant="ghost" icon={LogOut} onClick={signOut}>Sign out</Button>
         </div>
       </nav>

@@ -1,13 +1,52 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Delete, ChevronLeft } from 'lucide-react';
+import { Delete, ChevronRight, LockKeyhole } from 'lucide-react';
 import { ROLES } from '@core/calc.js';
 import { DEMO_USERS } from '@core/seed.js';
-import { api } from '../lib/api.js';
+import { api, enterAccessCode } from '../lib/api.js';
 import { useSession } from '../lib/session.jsx';
-import { initials } from '../lib/format.js';
 import { Button, Field, Input, Notice, Loading, ErrorNote } from '../ui/kit.jsx';
+import { BrandMark, StoreName, Avatar } from '../ui/Brand.jsx';
 
 const roleLabel = (r) => ROLES.find((x) => x.id === r)?.label || r;
+
+function Frame({ storeName, children, sub }) {
+  return (
+    <div className="login">
+      <div className="login-box">
+        <div className="login-brand">
+          <BrandMark size={52} />
+          <StoreName name={storeName} className="login-name" />
+          {sub && <p className="login-sub">{sub}</p>}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function AccessCode({ onDone }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try { await enterAccessCode(code); await onDone(); } catch (err) { setError(err.message); } finally { setBusy(false); }
+  };
+  return (
+    <Frame storeName="Permanent Floors Carpet One" sub="Enter the store code to use this device. You only need to do this once.">
+      <form className="login-card stack" onSubmit={submit}>
+        <Field label="Store code">
+          <Input value={code} onChange={setCode} autoFocus autoComplete="off" autoCapitalize="none" spellCheck={false} />
+        </Field>
+        {error && <Notice tone="danger">{error}</Notice>}
+        <Button variant="primary" block busy={busy} type="submit" icon={LockKeyhole} disabled={!code.trim()}>Continue</Button>
+      </form>
+      <p className="login-foot">Don’t have the code? Ask the store owner.</p>
+    </Frame>
+  );
+}
 
 export default function Login() {
   const { signIn } = useSession();
@@ -21,41 +60,40 @@ export default function Login() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  if (error) return <div className="login"><div className="login-box"><ErrorNote error={error} retry={load} /></div></div>;
-  if (!info) return <div className="login"><Loading label={__DEMO__ ? 'Setting up the demo store…' : 'Loading…'} /></div>;
-  if (info.setup_needed) return <Setup onDone={signIn} />;
+  if (error) return <Frame storeName="Store Manager"><ErrorNote error={error} retry={load} /></Frame>;
+  if (!info) return <div className="login"><Loading plain label={__DEMO__ ? 'Setting up the demo store…' : 'Loading…'} /></div>;
+  if (info.setup_needed) return <Setup onDone={signIn} storeName={info.store_name} />;
+  const sample = __DEMO__ || info.demo;
 
+  if (person) {
+    return (
+      <Frame storeName={info.store_name}>
+        <PinEntry person={person} onBack={() => setPerson(null)} onDone={signIn} hint={sample ? DEMO_USERS.find((u) => u.name === person.name)?.pin : null} />
+      </Frame>
+    );
+  }
   return (
-    <div className="login">
-      <div className="login-box">
-        <div className="login-brand">
-          <b>{info.store_name}</b>
-          <span>{person ? `Enter your PIN, ${person.name.split(' ')[0]}.` : 'Who’s signing in?'}</span>
-        </div>
-        {person ? <PinEntry person={person} onBack={() => setPerson(null)} onDone={signIn} /> : (
-          <>
-            <div className="people">
-              {info.users.map((u) => (
-                <button key={u.id} type="button" className="person" onClick={() => setPerson(u)}>
-                  <span className="avatar">{initials(u.name)}</span>
-                  <span className="grow"><span className="strong" style={{ display: 'block' }}>{u.name}</span><span className="small muted">{roleLabel(u.role)}</span></span>
-                </button>
-              ))}
-            </div>
-            {__DEMO__ && (
-              <div className="demo-hint">
-                This is a demo with sample data. PINs: {DEMO_USERS.map((u) => `${u.name.split(' ')[0]} ${u.pin}`).join(', ')}.
-                Try Luis to see the installer view.
-              </div>
-            )}
-          </>
-        )}
+    <Frame storeName={info.store_name} sub="Tap your name to sign in.">
+      <div className="login-card people">
+        {info.users.map((u) => (
+          <button key={u.id} type="button" className="person" onClick={() => setPerson(u)}>
+            <Avatar name={u.name} />
+            <span className="grow"><span className="person-name">{u.name}</span><span className="small muted">{roleLabel(u.role)}</span></span>
+            <ChevronRight size={18} className="faint" aria-hidden="true" />
+          </button>
+        ))}
       </div>
-    </div>
+      {sample && (
+        <div className="demo-hint">
+          <b>This store is filled with sample data.</b> Sign in as Ryan with PIN 1234 to see everything,
+          or as Luis with 5555 to see what an installer sees. Other PINs: {DEMO_USERS.filter((u) => !['Ryan', 'Luis'].includes(u.name.split(' ')[0])).map((u) => `${u.name.split(' ')[0]} ${u.pin}`).join(', ')}.
+        </div>
+      )}
+    </Frame>
   );
 }
 
-function PinEntry({ person, onBack, onDone }) {
+function PinEntry({ person, onBack, onDone, hint }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -72,7 +110,7 @@ function PinEntry({ person, onBack, onDone }) {
     } finally { setBusy(false); }
   }, [busy, person.id, onDone]);
 
-  const press = useCallback((d) => setPin((p) => (p.length >= 8 ? p : p + d)), []);
+  const press = useCallback((d) => { setError(null); setPin((p) => (p.length >= 8 ? p : p + d)); }, []);
   useEffect(() => {
     const onKey = (e) => {
       if (/^\d$/.test(e.key)) press(e.key);
@@ -86,16 +124,23 @@ function PinEntry({ person, onBack, onDone }) {
 
   const dots = Math.max(4, pin.length);
   return (
-    <div className="stack-lg">
-      <div className="pin-dots" aria-label={`${pin.length} digits entered`}>
+    <div className="login-card stack-lg">
+      <div className="pin-who">
+        <Avatar name={person.name} size={48} />
+        <div className="grow">
+          <div className="person-name">{person.name}</div>
+          <button type="button" className="link-btn small" onClick={onBack}>Not you?</button>
+        </div>
+      </div>
+      <div className={`pin-dots ${error ? 'pin-error' : ''}`} aria-label={`${pin.length} digits entered`}>
         {Array.from({ length: dots }, (_, i) => <span key={i} className={i < pin.length ? 'on' : ''} />)}
       </div>
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error ? <Notice tone="danger">{error}</Notice> : hint ? <p className="small muted center">Sample PIN: {hint}</p> : <p className="small muted center">Enter your PIN</p>}
       <div className="keypad">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
           <button key={d} type="button" className="key" onClick={() => press(d)}>{d}</button>
         ))}
-        <button type="button" className="key key-quiet" onClick={onBack}><ChevronLeft size={18} aria-hidden="true" /> Back</button>
+        <span />
         <button type="button" className="key" onClick={() => press('0')}>0</button>
         <button type="button" className="key key-quiet" aria-label="Delete digit" onClick={() => setPin((p) => p.slice(0, -1))}><Delete aria-hidden="true" /></button>
       </div>
@@ -104,8 +149,8 @@ function PinEntry({ person, onBack, onDone }) {
   );
 }
 
-function Setup({ onDone }) {
-  const [f, setF] = useState({ store_name: 'Permanent Floors Carpet One', name: '', pin: '', pin2: '' });
+function Setup({ onDone, storeName }) {
+  const [f, setF] = useState({ store_name: storeName || 'Permanent Floors Carpet One', name: '', pin: '', pin2: '' });
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v }));
@@ -120,12 +165,8 @@ function Setup({ onDone }) {
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
   return (
-    <div className="login">
-      <form className="login-box" onSubmit={submit}>
-        <div className="login-brand">
-          <b>Set up your store</b>
-          <span>Create the owner account. You can add your team after this.</span>
-        </div>
+    <Frame storeName={f.store_name} sub="Create the owner account. You can add your team after this.">
+      <form className="login-card stack" onSubmit={submit}>
         <Field label="Store name"><Input value={f.store_name} onChange={set('store_name')} /></Field>
         <Field label="Your name"><Input value={f.name} onChange={set('name')} autoComplete="name" /></Field>
         <div className="form-grid">
@@ -135,6 +176,6 @@ function Setup({ onDone }) {
         {error && <Notice tone="danger">{error}</Notice>}
         <Button variant="primary" block busy={busy} type="submit">Create owner account</Button>
       </form>
-    </div>
+    </Frame>
   );
 }

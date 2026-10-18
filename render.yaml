@@ -1,0 +1,23 @@
+# Render Blueprint: one web service with a persistent disk for the database.
+# In Render: New > Blueprint > pick this repository. It asks you for the store code (ACCESS_CODE).
+services:
+  - type: web
+    name: permanent-floors
+    runtime: docker
+    plan: 0.5c-512mb
+    region: ohio
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    disk:
+      name: store-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: TRUST_PROXY
+        value: "true"
+      - key: SEED_SAMPLE_DATA
+        value: "true"
+      - key: ACCESS_CODE
+        sync: false

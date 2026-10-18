@@ -12,6 +12,28 @@ let token = storage.get(TOKEN_KEY);
 export const getToken = () => token;
 export function setToken(t) { token = t || null; storage.set(TOKEN_KEY, token); }
 
+// Store access code: a device enters it once and keeps a signed device token.
+const DEVICE_KEY = 'pf_device';
+let device = storage.get(DEVICE_KEY);
+export function setDevice(t) { device = t || null; storage.set(DEVICE_KEY, device); }
+
+export async function accessStatus() {
+  if (__DEMO__) return { required: false, ok: true };
+  try {
+    const res = await fetch('/api/access', { headers: device ? { 'X-Device-Token': device } : {} });
+    return await res.json();
+  } catch {
+    throw new ApiError('Can’t reach the store server. Check the connection and try again.', 0);
+  }
+}
+
+export async function enterAccessCode(code) {
+  const res = await fetch('/api/access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.error || 'That code didn’t work.', res.status);
+  setDevice(data.device_token);
+}
+
 export class ApiError extends Error {
   constructor(message, status) { super(message); this.status = status; }
 }
@@ -27,7 +49,11 @@ async function httpBackend(method, path, body) {
   try {
     res = await fetch(`/api${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(device ? { 'X-Device-Token': device } : {}),
+      },
       body: method === 'GET' ? undefined : JSON.stringify(body || {}),
     });
   } catch {
@@ -50,7 +76,10 @@ async function backend(method, path, body) {
 
 export async function request(method, path, body) {
   const res = await backend(method, path, body);
-  if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/setup')) {
+  if (res.status === 401 && res.body?.access_required) {
+    setDevice(null);
+    window.dispatchEvent(new Event('pf:access-required'));
+  } else if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/setup')) {
     setToken(null);
     window.dispatchEvent(new Event('pf:signed-out'));
   }
@@ -72,10 +101,16 @@ export async function resetDemo() {
   setToken(null);
 }
 
+// Server-only, owner: reload the sample store or erase everything.
+export async function resetStore(mode) {
+  await request('POST', '/admin/reset', { mode, confirm: 'ERASE' });
+  setToken(null);
+}
+
 // Server-only: download a file that needs the sign-in token.
 export async function downloadFile(path, filename) {
   if (__DEMO__) return;
-  const res = await fetch(`/api${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const res = await fetch(`/api${path}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(device ? { 'X-Device-Token': device } : {}) } });
   if (!res.ok) {
     let msg = 'Download failed.';
     try { msg = (await res.json()).error || msg; } catch { /* not json */ }

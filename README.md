@@ -15,7 +15,7 @@ Store management software for Permanent Floors Carpet One, built around how a fl
 | **Customers** | Homeowners, commercial accounts and builders, with full history of quotes, orders, appointments, payments and notes. |
 | **Products** | Catalog for carpet, pad, LVP, laminate, hardwood, tile, sheet vinyl, trim, supplies, rugs, labor and fees. Cost and price with margin helper, roll width or square feet per box, vendor, and reorder point. |
 | **Reports** | Sales and gross margin by month, salesperson, category and customer type. Money owed with aging. Deposits held. Quote close rate. Inventory value. Crew workload. Daily payments by method for closing out. CSV export. |
-| **Team** | Sign in by tapping your name and entering a PIN. Roles: owner, manager, sales, warehouse, installer. |
+| **Team** | Sign in by tapping your name and entering a PIN. Roles: owner, manager, sales, warehouse, installer. Online, a store code keeps everyone else out, and repeated wrong PINs lock that person out for a while. |
 | **Data** | Everything lives in one SQLite file. One-click backup download and full JSON export. |
 
 Integrations (card processing, QuickBooks, email and text sending, vendor ordering systems, Measure Square) are not included yet. The code is set up so each can be added later as its own module.
@@ -41,36 +41,47 @@ DATA_DIR=./demo-data npm run seed
 DATA_DIR=./demo-data npm start
 ```
 
-Sample PINs: Dana 1234 (owner), Marcus 2222 and Priya 3333 (sales), Tom 4444 (warehouse), Luis 5555 (installer).
+Sample PINs: Ryan 1234 (owner), Marcus 2222 and Priya 3333 (sales), Tom 4444 (warehouse), Luis 5555 (installer).
 
 ## Use it on phones and tablets
 
 Run the app on a computer at the store that stays on. When it starts, it prints an address like `http://192.168.1.20:3000`. Any phone on the store Wi-Fi can open that address. On the phone, use **Add to Home Screen** so it opens like an app.
 
-To use it away from the store, for salespeople at a customer's house or installers on a job, host it on the internet (next section). Always put it behind **HTTPS** when it's reachable from outside your network.
+To use it away from the store, put it online (next section).
 
-## Host it in the cloud
+## Put it online (Render)
 
-The included `Dockerfile` runs on any host that supports Docker and a persistent disk (Fly.io, Render, Railway, a small VPS, a Synology NAS):
+Hosting it online lets people use it from anywhere: salespeople at a customer's house, installers on a job, the owner at home. The repository includes a `render.yaml` that sets everything up on [Render](https://render.com): HTTPS, a 1 GB persistent disk for the database, health checks, and redeploys whenever you push to GitHub. It runs on Render's smallest paid server ($7/month) plus the disk ($0.25 per GB per month).
+
+1. Push this folder to a **private** GitHub repository.
+2. Sign up at render.com with that GitHub account and add a payment method.
+3. In Render, choose **New**, then **Blueprint**, and pick the repository.
+4. Render asks for **ACCESS_CODE**. Type a store code that's easy to say out loud, like `floors2026`. Every phone and computer enters it once before anyone can sign in.
+5. Click **Apply**. The first deploy takes a few minutes. Your address looks like `https://permanent-floors.onrender.com`.
+
+The first time it starts, it loads the **sample store** so there's something to try right away (owner Ryan Mackey, PIN 1234). When you're ready to use it for real, the owner goes to **Settings, Sample data, Start fresh with no data**. That erases everything and goes back to the "create the owner account" screen. To skip the sample store entirely, set `SEED_SAMPLE_DATA` to `false` before the first deploy.
+
+To change the store code later, edit `ACCESS_CODE` under the service's **Environment** tab in Render. Every device has to enter the new code.
+
+The same `Dockerfile` also works on any other host with Docker and a persistent disk (Fly.io, Railway, a VPS):
 
 ```bash
 docker build -t store-manager .
-docker run -d -p 3000:3000 -v store-data:/data --name store-manager store-manager
+docker run -d -p 3000:3000 -v store-data:/data -e ACCESS_CODE=floors2026 --name store-manager store-manager
 ```
-
-The database is stored in the `/data` volume. Put HTTPS in front with your host's built-in option or with [Caddy](https://caddyserver.com).
-
-Settings you can change with environment variables:
 
 | Variable | Default | What it does |
 |---|---|---|
 | `PORT` | `3000` | Port to listen on |
 | `HOST` | `0.0.0.0` | Address to listen on (all network interfaces) |
-| `DATA_DIR` | `./data` | Folder for `store.db` |
+| `DATA_DIR` | `./data` | Folder for `store.db` and daily backups |
+| `ACCESS_CODE` | none | Store code each device must enter once. Always set this when the app is on the internet. |
+| `SEED_SAMPLE_DATA` | `false` | Load the sample store the first time the database is empty |
+| `TRUST_PROXY` | `false` | Set to `true` behind a hosting proxy (Render sets this through `render.yaml`) |
 
 ## Backups
 
-Owners and managers can download a copy of the database from **Settings, Backups**. Do it regularly and keep copies somewhere off the computer. To restore one, stop the app, replace `data/store.db` with the backup file, and start the app again.
+The server saves a copy of the database every day in `DATA_DIR/backups` and keeps the last 14. Owners and managers can also download a copy any time from **Settings, Backups**. Keep a copy somewhere off the server now and then. To restore one, stop the app, replace `store.db` with the backup file, and start the app again.
 
 ## How the numbers work
 

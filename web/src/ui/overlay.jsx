@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { IconButton, Button } from './kit.jsx';
 
 let locks = 0;
@@ -69,7 +69,12 @@ export function FeedbackProvider({ children }) {
     <FeedbackCtx.Provider value={{ toast, confirm }}>
       {children}
       <div className="toast-wrap" aria-live="polite">
-        {toasts.map((t) => <div key={t.id} className={`toast ${t.tone === 'error' ? 'toast-error' : ''}`}>{t.message}</div>)}
+        {toasts.map((t) => (
+          <div key={t.id} className={`toast ${t.tone === 'error' ? 'toast-error' : ''}`}>
+            {t.tone === 'error' ? <AlertCircle size={18} aria-hidden="true" /> : <CheckCircle2 size={18} aria-hidden="true" />}
+            <span>{t.message}</span>
+          </div>
+        ))}
       </div>
       {confirmState && (
         <Sheet title={confirmState.title || 'Are you sure?'} onClose={() => close(false)}

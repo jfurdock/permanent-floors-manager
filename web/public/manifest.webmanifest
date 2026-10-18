@@ -1,0 +1,15 @@
+{
+  "name": "Permanent Floors Store Manager",
+  "short_name": "Store Manager",
+  "description": "Quotes, orders, inventory, scheduling and payments for Permanent Floors Carpet One.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f1",
+  "theme_color": "#b3202e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

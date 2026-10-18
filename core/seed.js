@@ -13,7 +13,7 @@ function rng(seed) {
 }
 
 export const DEMO_USERS = [
-  { name: 'Dana Whitfield', role: 'admin', pin: '1234' },
+  { name: 'Ryan Mackey', role: 'admin', pin: '1234' },
   { name: 'Marcus Reyes', role: 'sales', pin: '2222' },
   { name: 'Priya Shah', role: 'sales', pin: '3333' },
   { name: 'Tom Kowalski', role: 'warehouse', pin: '4444' },
@@ -59,7 +59,7 @@ export async function seedDemo(api, { today = localDate(), storeName } = {}) {
     const created = await call('POST', '/users', { name: u.name, role: u.role, pin: u.pin, installer_id: u.installer ? installers[u.installer] : null });
     users[u.name] = created.id;
   }
-  const reps = [users['Marcus Reyes'], users['Priya Shah'], users['Dana Whitfield']];
+  const reps = [users['Marcus Reyes'], users['Priya Shah'], users['Ryan Mackey']];
 
   // Vendors
   const vendors = {};
@@ -395,6 +395,27 @@ export async function seedDemo(api, { today = localDate(), storeName } = {}) {
     await addLines(`/quotes/${q}`, jobs[Math.floor(rand() * 2)]());
     await call('POST', `/quotes/${q}/status`, { status: 'declined' });
     quoteDate(q, date, addDays(date, 1));
+  }
+
+  // Give the history believable dates: customers joined when they first got a quote,
+  // and each order's activity is spread between when it was placed and when it finished.
+  db.run(`UPDATE customers SET created_at = COALESCE(
+      (SELECT MIN(x) FROM (SELECT MIN(created_at) AS x FROM quotes WHERE customer_id = customers.id
+                           UNION ALL SELECT MIN(created_at) FROM orders WHERE customer_id = customers.id)),
+      created_at)`);
+  const todayMs = Date.parse(`${today}T12:00:00`);
+  for (const o of db.all('SELECT id, order_date, invoiced_at FROM orders')) {
+    const lastPay = db.get('SELECT MAX(date) AS d FROM payments WHERE order_id = ?', o.id).d;
+    const lastAppt = db.get("SELECT MAX(date) AS d FROM appointments WHERE order_id = ? AND date <= ?", o.id, today).d;
+    const startMs = Date.parse(`${o.order_date}T10:00:00`);
+    const endDay = [o.invoiced_at, lastPay, lastAppt].filter(Boolean).sort().pop() || o.order_date;
+    const endMs = Math.min(Date.parse(`${endDay}T16:00:00`), todayMs);
+    const rows = db.all("SELECT id FROM activity WHERE entity_type = 'order' AND entity_id = ? ORDER BY id", o.id);
+    rows.forEach((r, i) => {
+      const t = new Date(rows.length > 1 ? startMs + ((Math.max(endMs, startMs) - startMs) * i) / (rows.length - 1) : startMs);
+      t.setHours(9 + ((i * 3) % 8), (i * 17) % 60, 0, 0); // during store hours
+      db.run('UPDATE activity SET created_at = ? WHERE id = ?', t.toISOString(), r.id);
+    });
   }
 
   // Make the overdue reminder realistic

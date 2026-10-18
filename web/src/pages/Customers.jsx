@@ -87,10 +87,10 @@ export function CustomerPage({ params }) {
           </div>
         </div>
       </div>
-      <div className="hstack wrap">
-        <Button variant="primary" icon={FileText} busy={busy} onClick={() => newDoc('quote')}>New quote</Button>
-        <Button icon={ClipboardList} busy={busy} onClick={() => newDoc('order')}>New order</Button>
-        <Button icon={CalendarPlus} onClick={() => setScheduling(true)}>Schedule a measure</Button>
+      <div className="quick-actions">
+        <button type="button" className="quick-action primary" aria-disabled={busy} onClick={() => newDoc('quote')}><FileText aria-hidden="true" />New quote</button>
+        <button type="button" className="quick-action" aria-disabled={busy} onClick={() => newDoc('order')}><ClipboardList aria-hidden="true" />New order</button>
+        <button type="button" className="quick-action" onClick={() => setScheduling(true)}><CalendarPlus aria-hidden="true" />Schedule measure</button>
       </div>
       <div className="cols">
         <div className="stack-lg">
@@ -158,11 +158,11 @@ export function CustomerPage({ params }) {
                 {address && <><dt>Address</dt><dd>{address}</dd></>}
                 {c.source && <><dt>Found us</dt><dd>{c.source}</dd></>}
               </dl>
-              <div className="hstack wrap">
-                {c.phone && <a className="btn btn-sm" href={telHref(c.phone)}><Phone aria-hidden="true" />Call</a>}
-                {c.phone && <a className="btn btn-sm" href={smsHref(c.phone)}><MessageSquare aria-hidden="true" />Text</a>}
-                {c.email && <a className="btn btn-sm" href={`mailto:${c.email}`}><Mail aria-hidden="true" />Email</a>}
-                {address && <a className="btn btn-sm" href={mapsHref(address)} target="_blank" rel="noreferrer"><MapPin aria-hidden="true" />Map</a>}
+              <div className="quick-actions" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(64px, 1fr))' }}>
+                {c.phone && <a className="quick-action" href={telHref(c.phone)}><Phone aria-hidden="true" />Call</a>}
+                {c.phone && <a className="quick-action" href={smsHref(c.phone)}><MessageSquare aria-hidden="true" />Text</a>}
+                {c.email && <a className="quick-action" href={`mailto:${c.email}`}><Mail aria-hidden="true" />Email</a>}
+                {address && <a className="quick-action" href={mapsHref(address)} target="_blank" rel="noreferrer"><MapPin aria-hidden="true" />Map</a>}
               </div>
               {c.notes && <div className="small" style={{ whiteSpace: 'pre-wrap' }}>{c.notes}</div>}
             </div>

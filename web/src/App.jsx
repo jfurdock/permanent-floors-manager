@@ -4,7 +4,7 @@ import { useRoute, match, lastNavigation, savedScroll } from './lib/router.jsx';
 import { FeedbackProvider } from './ui/overlay.jsx';
 import { Shell } from './ui/Shell.jsx';
 import { Loading, ErrorNote, Empty } from './ui/kit.jsx';
-import Login from './pages/Login.jsx';
+import Login, { AccessCode } from './pages/Login.jsx';
 import Home from './pages/Home.jsx';
 import { CustomersPage, CustomerPage } from './pages/Customers.jsx';
 import { QuotesPage } from './pages/Quotes.jsx';
@@ -81,8 +81,9 @@ function Gate() {
   useEffect(() => {
     if (session.settings?.store_name) document.title = session.settings.store_name;
   }, [session.settings?.store_name]);
-  if (session.status === 'loading') return <div className="login"><Loading label={__DEMO__ ? 'Setting up the demo store…' : 'Loading…'} /></div>;
+  if (session.status === 'loading') return <div className="login"><Loading plain label={__DEMO__ ? 'Setting up the demo store…' : 'Loading…'} /></div>;
   if (session.status === 'error') return <div className="login"><div className="login-box"><ErrorNote error={session.error} retry={session.refresh} /></div></div>;
+  if (session.status === 'access') return <AccessCode onDone={session.refresh} />;
   if (session.status === 'signed-out') return <Login />;
   return <Shell><Router /></Shell>;
 }

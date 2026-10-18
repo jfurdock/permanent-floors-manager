@@ -44,10 +44,10 @@ export default function JobPage({ params }) {
         <div className="panel-body">
           <div className="strong">{address || 'No job address on file'}</div>
           {job.customer?.phone && <div className="muted small">Customer phone: <span className="num">{job.customer.phone}</span></div>}
-          <div className="hstack wrap">
-            {job.customer?.phone && <a className="btn" href={telHref(job.customer.phone)}><Phone aria-hidden="true" />Call</a>}
-            {job.customer?.phone && <a className="btn" href={smsHref(job.customer.phone)}><MessageSquare aria-hidden="true" />Text</a>}
-            {address && <a className="btn" href={mapsHref(address)} target="_blank" rel="noreferrer"><MapPin aria-hidden="true" />Directions</a>}
+          <div className="quick-actions">
+            {job.customer?.phone && <a className="quick-action" href={telHref(job.customer.phone)}><Phone aria-hidden="true" />Call</a>}
+            {job.customer?.phone && <a className="quick-action" href={smsHref(job.customer.phone)}><MessageSquare aria-hidden="true" />Text</a>}
+            {address && <a className="quick-action primary" href={mapsHref(address)} target="_blank" rel="noreferrer"><MapPin aria-hidden="true" />Directions</a>}
           </div>
         </div>
       </Panel>

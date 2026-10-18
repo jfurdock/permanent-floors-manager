@@ -5,7 +5,7 @@ import { seedDemo } from '@core/seed.js';
 
 const DB_NAME = 'pf-demo';
 const STORE = 'files';
-const KEY = 'store-v1';
+const KEY = 'store-v2';
 
 function idb() {
   return new Promise((resolve, reject) => {

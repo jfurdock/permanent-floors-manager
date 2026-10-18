@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Plus, KeyRound, LogOut, Download, RotateCcw, Database } from 'lucide-react';
 import { ROLES } from '@core/calc.js';
-import { api, downloadFile, downloadText, resetDemo, storage } from '../lib/api.js';
+import { api, downloadFile, downloadText, resetDemo, resetStore, storage } from '../lib/api.js';
 import { useData } from '../lib/data.js';
 import { useSession } from '../lib/session.jsx';
 import { useRoute } from '../lib/router.jsx';
 import { Screen } from '../ui/Shell.jsx';
 import { Panel, Button, Badge, Field, Input, Select, TextArea, NumberInput, Check, Segmented, Notice } from '../ui/kit.jsx';
 import { Sheet, useAction, useFeedback } from '../ui/overlay.jsx';
-import { initials } from '../lib/format.js';
+import { Avatar } from '../ui/Brand.jsx';
 
 const roleLabel = (r) => ROLES.find((x) => x.id === r)?.label || r;
 
@@ -31,7 +31,7 @@ export default function SettingsPage() {
       {isManager && <TeamPanel me={user} />}
       {!isInstaller && <CrewsPanel />}
       <AccountPanel />
-      {isManager && !demo && <DataPanel />}
+      {isManager && !__DEMO__ && <DataPanel />}
       {demo && <DemoPanel />}
     </Screen>
   );
@@ -89,7 +89,7 @@ function TeamPanel({ me }) {
       <div className="rows">
         {(users.data || []).map((u) => (
           <button key={u.id} type="button" className="row" onClick={() => setEditing(u)}>
-            <span className="avatar" style={{ width: 36, height: 36, fontSize: 14 }}>{initials(u.name)}</span>
+            <Avatar name={u.name} size={36} />
             <div className="row-main"><span className="row-title">{u.name}{u.id === me.id ? ' (you)' : ''}</span><span className="row-sub">{roleLabel(u.role)}{u.installer_name ? `, ${u.installer_name}` : ''}</span></div>
             {!u.active && <Badge tone="danger">Can’t sign in</Badge>}
           </button>
@@ -215,7 +215,7 @@ function AccountPanel() {
   return (
     <Panel title="My account">
       <div className="panel-body">
-        <div className="hstack"><span className="avatar">{initials(user.name)}</span><div><div className="strong">{user.name}</div><div className="small muted">{roleLabel(user.role)}</div></div></div>
+        <div className="hstack"><Avatar name={user.name} /><div><div className="strong">{user.name}</div><div className="small muted">{roleLabel(user.role)}</div></div></div>
         <Field label="Appearance">
           <Segmented label="Appearance" value={theme} onChange={(t) => { setTheme(t); storage.set('pf_theme', t === 'system' ? null : t); applyTheme(t); }}
             options={[{ value: 'system', label: 'Match device' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
@@ -238,7 +238,7 @@ function DataPanel() {
   return (
     <Panel title="Backups">
       <div className="panel-body">
-        <p className="small muted">Everything lives in one file on the computer running the app. Download a copy regularly and keep it somewhere safe.</p>
+        <p className="small muted">Everything is stored in one database file on the server, which also keeps a copy of each of the last 14 days. Download a copy now and then and keep it somewhere safe.</p>
         <div className="hstack wrap">
           <Button icon={Database} busy={busy} onClick={() => run(() => downloadFile('/backup', `store-backup-${new Date().toISOString().slice(0, 10)}.db`), 'Backup downloaded')}>Download backup</Button>
           <Button icon={Download} busy={busy} onClick={() => run(async () => downloadText(JSON.stringify(await api.get('/admin/export'), null, 1), `store-export-${new Date().toISOString().slice(0, 10)}.json`, 'application/json'), 'Export downloaded')}>Export all data (JSON)</Button>
@@ -249,17 +249,35 @@ function DataPanel() {
 }
 
 function DemoPanel() {
+  const { user } = useSession();
   const [run, busy] = useAction();
   const { confirm } = useFeedback();
-  const reset = async () => {
-    if (!(await confirm({ title: 'Start the demo over?', message: 'Your changes are erased and the sample store is loaded again.', confirmLabel: 'Reset demo' }))) return;
-    run(async () => { await resetDemo(); window.dispatchEvent(new Event('pf:signed-out')); }, 'Demo reset');
+  const owner = user?.role === 'admin';
+  const reload = async () => {
+    if (!(await confirm({ title: 'Reload the sample store?', message: 'Every change made so far is erased and the sample data is loaded again. Everyone is signed out.', confirmLabel: 'Reload sample data' }))) return;
+    run(async () => {
+      if (__DEMO__) await resetDemo(); else await resetStore('sample');
+      window.dispatchEvent(new Event('pf:signed-out'));
+    }, 'Sample data reloaded');
+  };
+  const fresh = async () => {
+    if (!(await confirm({ title: 'Erase everything and start fresh?', message: 'All customers, quotes, orders, products and team accounts are deleted. You’ll create the owner account again on the next screen. A backup copy is kept on the server.', confirmLabel: 'Erase and start fresh' }))) return;
+    run(async () => { await resetStore('empty'); window.dispatchEvent(new Event('pf:signed-out')); }, 'Store cleared');
   };
   return (
-    <Panel title="Demo">
+    <Panel title="Sample data">
       <div className="panel-body">
-        <Notice>This demo runs entirely in your browser with sample data. Changes are saved on this device only.</Notice>
-        <div><Button icon={RotateCcw} busy={busy} onClick={reset}>Reset sample data</Button></div>
+        <Notice>
+          {__DEMO__
+            ? 'This demo runs entirely in your browser with sample data. Changes are saved on this device only.'
+            : 'This store is filled with sample customers, jobs and stock so you can try everything. When you’re ready to use it for real, start fresh.'}
+        </Notice>
+        {(owner || __DEMO__) ? (
+          <div className="hstack wrap">
+            <Button icon={RotateCcw} busy={busy} onClick={reload}>Reload sample data</Button>
+            {!__DEMO__ && <Button variant="ghost" className="btn-danger" busy={busy} onClick={fresh}>Start fresh with no data</Button>}
+          </div>
+        ) : <p className="small muted">Only the owner can reset the sample data.</p>}
       </div>
     </Panel>
   );

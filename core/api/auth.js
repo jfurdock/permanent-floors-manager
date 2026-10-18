@@ -38,7 +38,9 @@ function startSession(db, userId) {
 
 export function register(r) {
   r.get('/auth/users', ({ db, settings }) => {
-    const users = db.all('SELECT id, name, role FROM users WHERE active = 1 ORDER BY name');
+    const users = db.all(
+      `SELECT id, name, role FROM users WHERE active = 1
+        ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'manager' THEN 1 WHEN 'sales' THEN 2 WHEN 'warehouse' THEN 3 ELSE 4 END, name`);
     const s = settings();
     return { users, setup_needed: users.length === 0, store_name: s.store_name, demo: s.demo_mode === '1' };
   }, { public: true });
@@ -62,12 +64,18 @@ export function register(r) {
     if (!user) bad('Choose your name to sign in.');
     const f = failures.get(id);
     if (f && f.until > Date.now()) {
-      throw new ApiError(429, `Too many tries. Wait ${Math.ceil((f.until - Date.now()) / 1000)} seconds and try again.`);
+      const secs = Math.ceil((f.until - Date.now()) / 1000);
+      throw new ApiError(429, `Too many tries. Wait ${secs > 90 ? `${Math.ceil(secs / 60)} minutes` : `${secs} seconds`} and try again.`);
     }
     const hash = user.pin_salt ? await hashPin(String(body.pin || ''), user.pin_salt) : null;
     if (!hash || hash !== user.pin_hash) {
-      const next = { count: (f?.count || 0) + 1, until: 0 };
-      if (next.count >= 5) { next.until = Date.now() + 60000; next.count = 0; }
+      // 5 wrong PINs locks this person out for a minute; every 5 after that, for 15 minutes.
+      const next = { count: (f?.count || 0) + 1, until: 0, rounds: f?.rounds || 0 };
+      if (next.count >= 5) {
+        next.rounds += 1;
+        next.until = Date.now() + (next.rounds > 1 ? 15 * 60000 : 60000);
+        next.count = 0;
+      }
       failures.set(id, next);
       bad('That PIN didn’t match. Try again.');
     }

@@ -319,3 +319,11 @@ export function migrate(db) {
     db.run('INSERT OR IGNORE INTO counters (name, value) VALUES (?, ?)', name, value);
   }
 }
+
+// Remove every record and put settings and numbering back to their defaults.
+export function wipeAll(db) {
+  const tables = ['activity', 'notes', 'appointments', 'inventory_tx', 'inventory', 'po_lines', 'purchase_orders', 'payments',
+    'rooms', 'lines', 'orders', 'quotes', 'products', 'vendors', 'customers', 'sessions', 'users', 'installers', 'counters', 'settings'];
+  for (const t of tables) db.exec(`DELETE FROM ${t}`);
+  migrate(db);
+}

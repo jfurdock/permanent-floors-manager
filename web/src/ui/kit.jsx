@@ -162,8 +162,15 @@ export function Empty({ icon: Icon, title, children, action }) {
   );
 }
 
-export function Loading({ label = 'Loading…' }) {
-  return <div className="loading" role="status">{label}</div>;
+export function Loading({ label = 'Loading…', plain = false, rows = 4 }) {
+  if (plain) return <div className="loading" role="status">{label}</div>;
+  return (
+    <div className="panel skeleton-list" role="status" aria-label={label}>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="skeleton-row" style={{ opacity: 1 - i * 0.18 }}><i className="skeleton" /><i className="skeleton" /><i className="skeleton" /></div>
+      ))}
+    </div>
+  );
 }
 
 export function ErrorNote({ error, retry }) {
