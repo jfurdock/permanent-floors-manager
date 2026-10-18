@@ -4,8 +4,9 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 
 // `npm run build` -> dist/ (served by the Node server)
 // `npm run build:demo` -> dist-demo/index.html (one self-contained file that runs entirely in the browser)
+// `npm run build:pages` -> docs/ (the browser version, for free hosting on GitHub Pages)
 export default defineConfig(({ mode }) => {
-  const demo = mode === 'demo';
+  const demo = mode === 'demo' || mode === 'pages';
   return {
     root: 'web',
     base: './',
@@ -13,7 +14,7 @@ export default defineConfig(({ mode }) => {
     define: { __DEMO__: JSON.stringify(demo) },
     resolve: { alias: { '@core': new URL('./core', import.meta.url).pathname } },
     build: {
-      outDir: demo ? '../dist-demo' : '../dist',
+      outDir: mode === 'pages' ? '../docs' : demo ? '../dist-demo' : '../dist',
       emptyOutDir: true,
       chunkSizeWarningLimit: 4000,
       assetsInlineLimit: demo ? 100000000 : 4096,

@@ -12,6 +12,7 @@
     "dev": "concurrently -k -n api,web \"node --watch --disable-warning=ExperimentalWarning server/index.js\" \"vite\"",
     "build": "vite build",
     "build:demo": "vite build --mode demo",
+    "build:pages": "vite build --mode pages",
     "seed": "node --disable-warning=ExperimentalWarning server/seed.js",
     "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
   },

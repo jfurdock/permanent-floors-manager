@@ -49,6 +49,16 @@ Run the app on a computer at the store that stays on. When it starts, it prints 
 
 To use it away from the store, put it online (next section).
 
+## Free online demo (GitHub Pages)
+
+The `docs/` folder holds a version that runs entirely in the browser, loaded with the sample store. GitHub Pages can host it for free. It's good for showing the app to someone and letting them try it. Each person's changes are saved in their own browser on that device, and **Reload sample data** in Settings starts it over.
+
+1. In the GitHub repository, go to **Settings**, then **Pages**.
+2. Under **Build and deployment**, set **Source** to **Deploy from a branch**, set the branch to `main` and the folder to `/docs`, and click **Save**.
+3. After a minute or two, it's live at `https://<your-github-name>.github.io/permanent-floors-manager/`.
+
+Free GitHub Pages needs the repository to be public. The demo contains only sample data. After changing the web app, run `npm run build:pages` and push to update it.
+
 ## Put it online (Render)
 
 Hosting it online lets people use it from anywhere: salespeople at a customer's house, installers on a job, the owner at home. The repository includes a `render.yaml` that sets everything up on [Render](https://render.com): HTTPS, a 1 GB persistent disk for the database, health checks, and redeploys whenever you push to GitHub. It runs on Render's smallest paid server ($7/month) plus the disk ($0.25 per GB per month).
@@ -110,6 +120,7 @@ npm run dev          # API on :3000 and the web app with live reload on :5173
 npm test             # end-to-end checks of the business rules
 npm run build        # rebuild dist/ after changing the web app
 npm run build:demo   # dist-demo/index.html: one file that runs entirely in the browser with sample data
+npm run build:pages  # the same browser version into docs/, for GitHub Pages
 ```
 
 ```
